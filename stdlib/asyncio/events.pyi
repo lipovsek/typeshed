@@ -1,6 +1,6 @@
 import ssl
 import sys
-from _typeshed import FileDescriptorLike, Self, WriteableBuffer
+from _typeshed import FileDescriptorLike, ReadableBuffer, Self, StrPath, WriteableBuffer
 from abc import ABCMeta, abstractmethod
 from collections.abc import Awaitable, Callable, Coroutine, Generator, Sequence
 from contextvars import Context
@@ -85,7 +85,6 @@ class TimerHandle(Handle):
         loop: AbstractEventLoop,
         context: Context | None = ...,
     ) -> None: ...
-    def __hash__(self) -> int: ...
     def when(self) -> float: ...
     def __lt__(self, other: TimerHandle) -> bool: ...
     def __le__(self, other: TimerHandle) -> bool: ...
@@ -195,7 +194,7 @@ class AbstractEventLoop:
     async def getaddrinfo(
         self,
         host: bytes | str | None,
-        port: str | int | None,
+        port: bytes | str | int | None,
         *,
         family: int = ...,
         type: int = ...,
@@ -373,7 +372,7 @@ class AbstractEventLoop:
         async def create_unix_server(
             self,
             protocol_factory: _ProtocolFactory,
-            path: str | None = ...,
+            path: StrPath | None = ...,
             *,
             sock: socket | None = ...,
             backlog: int = ...,
@@ -433,7 +432,7 @@ class AbstractEventLoop:
         async def create_unix_server(
             self,
             protocol_factory: _ProtocolFactory,
-            path: str | None = ...,
+            path: StrPath | None = ...,
             *,
             sock: socket | None = ...,
             backlog: int = ...,
@@ -563,7 +562,7 @@ class AbstractEventLoop:
     @abstractmethod
     async def sock_recv_into(self, sock: socket, buf: WriteableBuffer) -> int: ...
     @abstractmethod
-    async def sock_sendall(self, sock: socket, data: bytes) -> None: ...
+    async def sock_sendall(self, sock: socket, data: ReadableBuffer) -> None: ...
     @abstractmethod
     async def sock_connect(self, sock: socket, address: _Address) -> None: ...
     @abstractmethod
@@ -574,7 +573,7 @@ class AbstractEventLoop:
         @abstractmethod
         async def sock_recvfrom_into(self, sock: socket, buf: WriteableBuffer, nbytes: int = ...) -> int: ...
         @abstractmethod
-        async def sock_sendto(self, sock: socket, data: bytes, address: _Address) -> None: ...
+        async def sock_sendto(self, sock: socket, data: ReadableBuffer, address: _Address) -> None: ...
     # Signal handling.
     @abstractmethod
     def add_signal_handler(self, sig: int, callback: Callable[..., object], *args: Any) -> None: ...
@@ -612,7 +611,6 @@ class AbstractEventLoopPolicy:
     def set_child_watcher(self, watcher: AbstractChildWatcher) -> None: ...
 
 class BaseDefaultEventLoopPolicy(AbstractEventLoopPolicy, metaclass=ABCMeta):
-    def __init__(self) -> None: ...
     def get_event_loop(self) -> AbstractEventLoop: ...
     def set_event_loop(self, loop: AbstractEventLoop | None) -> None: ...
     def new_event_loop(self) -> AbstractEventLoop: ...

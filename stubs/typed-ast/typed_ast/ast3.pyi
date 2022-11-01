@@ -1,3 +1,4 @@
+from _typeshed import ReadableBuffer
 from collections.abc import Iterator
 from typing import Any
 from typing_extensions import TypeAlias
@@ -9,7 +10,9 @@ class NodeVisitor:
 class NodeTransformer(NodeVisitor):
     def generic_visit(self, node: AST) -> None: ...
 
-def parse(source: str | bytes, filename: str | bytes = ..., mode: str = ..., feature_version: int = ...) -> AST: ...
+def parse(
+    source: str | ReadableBuffer, filename: str | ReadableBuffer = ..., mode: str = ..., feature_version: int = ...
+) -> AST: ...
 def copy_location(new_node: AST, old_node: AST) -> AST: ...
 def dump(node: AST, annotate_fields: bool = ..., include_attributes: bool = ...) -> str: ...
 def fix_missing_locations(node: AST) -> AST: ...
@@ -358,7 +361,7 @@ class arguments(AST):
     args: list[arg]
     vararg: arg | None
     kwonlyargs: list[arg]
-    kw_defaults: list[expr]
+    kw_defaults: list[expr | None]
     kwarg: arg | None
     defaults: list[expr]
 

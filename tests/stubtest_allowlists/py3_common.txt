@@ -46,12 +46,11 @@ asyncio.locks.Condition.locked
 asyncio.locks.Condition.release
 asyncio.proactor_events.BaseProactorEventLoop.sock_recv # nbytes parameter has different name 'n' in implementation
 asyncio.selector_events.BaseSelectorEventLoop.sock_recv # nbytes parameter has different name 'n' in implementation
+builtins.OSError.characters_written  # GetSetDescriptor that always raises AttributeError
 builtins.dict.get
 builtins.ellipsis  # type is not exposed anywhere
 builtins.function
 builtins.memoryview.__contains__  # C type that implements __getitem__
-sqlite3.dbapi2.Binary.__contains__  # C type that implements __getitem__
-sqlite3.Binary.__contains__  # C type that implements __getitem__
 builtins.object.__init__  # default C signature is incorrect
 builtins.type.__dict__  # read-only but not actually a property; stubtest thinks it's a mutable attribute.
 bz2.BZ2Decompressor.__init__  # function does not accept parameters but C signature is set
@@ -79,13 +78,11 @@ csv.Dialect.quoting
 csv.Dialect.skipinitialspace
 csv.DictReader.__init__  # runtime sig has *args but will error if more than 5 positional args are supplied
 csv.DictWriter.__init__  # runtime sig has *args but will error if more than 5 positional args are supplied
-ctypes.Array.__iter__  # mypy doesn't support using __getitem__ instead of __iter__ so this is here https://github.com/python/mypy/issues/2220
 ctypes.Array._type_  # _type_ and _length_ are abstract, https://github.com/python/typeshed/pull/6361
 ctypes.Array._length_
 ctypes.CDLL._FuncPtr  # None at class level but initialized in __init__ to this value
 ctypes.memmove  # CFunctionType
 ctypes.memset  # CFunctionType
-ctypes.pointer  # imported C function
 ctypes.string_at  # docstring argument name is wrong
 ctypes.wstring_at  # docstring argument name is wrong
 distutils.command.bdist_packager  # It exists in docs as package name but not in code except as a mention in a comment.
@@ -135,7 +132,9 @@ lib2to3.pytree.BasePattern.__new__
 lib2to3.pytree.BasePattern.type
 lib2to3.pytree.NegatedPattern.match
 lib2to3.pytree.NegatedPattern.match_seq
-mmap.mmap.__iter__  # has __getitem__ but mypy doesn't derive __iter__ from it: https://github.com/python/mypy/issues/2220
+# LC_MESSAGES is sometimes present in __all__, sometimes not,
+# so stubtest will sometimes complain about exported names being different at runtime to the exported names in the stub
+(locale)?
 multiprocessing.JoinableQueue
 multiprocessing.Queue
 multiprocessing.SimpleQueue
@@ -172,7 +171,9 @@ socketserver.BaseServer.get_request  # implemented in derived classes
 socketserver.BaseServer.server_bind  # implemented in derived classes
 ssl.Purpose.__new__  # You cannot override __new__ in NamedTuple and runtime uses namedtuple.
 ssl._ASN1Object.__new__  # You cannot override __new__ in NamedTuple and runtime uses namedtuple.
+(sys.get_int_max_str_digits)?  # Added in a patch release, backported to all security branches, but has yet to find its way to all GitHub Actions images
 sys.implementation  # Actually SimpleNamespace but then you wouldn't have convenient attributes
+(sys.set_int_max_str_digits)?  # Added in a patch release, backported to all security branches, but has yet to find its way to all GitHub Actions images
 sys.thread_info
 tarfile.TarFile.errors  # errors is initialized for some reason as None even though it really only accepts str
 threading.Condition.acquire  # Condition functions are exported in __init__
@@ -203,7 +204,6 @@ types.MethodType.__defaults__  # read-only but not actually a property; stubtest
 types.ModuleType.__dict__  # read-only but not actually a property; stubtest thinks it's a mutable attribute.
 types.ModuleType.__getattr__  # this doesn't exist at runtime
 types.SimpleNamespace.__init__  # class doesn't accept positional arguments but has default C signature
-typing.IO.__iter__  # Added because IO streams are iterable. See https://github.com/python/typeshed/commit/97bc450acd60c1bcdafef3ce8fbe3b95a9c0cac3
 typing.IO.__next__  # Added because IO streams are iterable. See https://github.com/python/typeshed/commit/97bc450acd60c1bcdafef3ce8fbe3b95a9c0cac3
 typing.type_check_only  # typing decorator that is not available at runtime
 unittest.mock.patch  # It's a complicated overload and I haven't been able to figure out why stubtest doesn't like it
@@ -220,8 +220,6 @@ webbrowser.UnixBrowser.remote_action  # always overridden in inheriting class
 webbrowser.UnixBrowser.remote_action_newtab  # always overridden in inheriting class
 webbrowser.UnixBrowser.remote_action_newwin  # always overridden in inheriting class
 xml.parsers.expat.expat_CAPI
-xml.etree.ElementTree.Element.__iter__  # Doesn't exist at runtime, but instances are iterable due to __getitem__
-xml.etree.cElementTree.Element.__iter__  # Doesn't exist at runtime, but instances are iterable due to __getitem__
 
 # ==========
 # Exists at runtime, but missing from stubs
@@ -345,9 +343,31 @@ turtle.ScrolledCanvas.onResize
 wave.Wave_read.initfp
 wave.Wave_write.initfp
 
+_ctypes.Array
+_ctypes.CFuncPtr
+_ctypes.POINTER
+_ctypes.PyObj_FromPtr
+_ctypes.Py_DECREF
+_ctypes.Py_INCREF
+_ctypes.Structure
+_ctypes.Union
+_ctypes.addressof
+_ctypes.alignment
+_ctypes.buffer_info
+_ctypes.byref
+_ctypes.call_cdeclfunction
+_ctypes.call_function
+_ctypes.get_errno
+_ctypes.pointer
+_ctypes.resize
+_ctypes.set_errno
+_ctypes.sizeof
+
 # ==========
 # Allowlist entries that cannot or should not be fixed
 # ==========
+
+ctypes.Array.raw  # exists but stubtest can't see it; only available if _CT == c_char
 
 _collections_abc.AsyncGenerator.asend  # async at runtime, deliberately not in the stub, see #7491. Pos-only differences also.
 _collections_abc.AsyncGenerator.__anext__  # async at runtime, deliberately not in the stub, see #7491
@@ -372,14 +392,6 @@ builtins.float.__getformat__  # Internal method for CPython test suite
 builtins.super.__self__
 builtins.super.__self_class__
 builtins.super.__thisclass__
-
-# Enum `name` and `value` are special properties that exists at runtime, but stubtest can't detect
-# https://github.com/python/typeshed/pull/6576#issuecomment-992538677
-enum.Enum.name
-enum.Enum.value
-enum.Flag.name
-enum.Flag.value
-enum.IntEnum.value
 
 # These enums derive from (int, IntEnum) or (str, Enum).
 pstats.SortKey.__new__
@@ -406,17 +418,6 @@ imaplib.IMAP4_SSL.ssl
 ssl.PROTOCOL_SSLv2
 ssl.PROTOCOL_SSLv3
 ssl.RAND_egd
-
-# GetSetDescriptor that always raises AttributeError
-builtins.OSError.characters_written
-# Aliases for OSError
-_socket.error.characters_written
-builtins.EnvironmentError.characters_written
-builtins.IOError.characters_written
-dbm.dumb.error.characters_written
-os.error.characters_written
-select.error.characters_written
-socket.error.characters_written
 
 collections.abc.*  # Types are re-exported from _collections_abc, so errors should be fixed there
 distutils.command.check.SilentReporter  # only defined if docutils in installed
@@ -600,6 +601,14 @@ wsgiref.handlers.BaseHandler.headers_sent
 wsgiref.handlers.BaseHandler.result
 wsgiref.handlers.BaseHandler.status
 
+# Iterable classes that don't define __iter__ at runtime (usually iterable via __getitem__)
+# These would ideally be special-cased by type checkers; see https://github.com/python/mypy/issues/2220
+ctypes.Array.__iter__
+mmap.mmap.__iter__
+xml.etree.ElementTree.Element.__iter__
+xml.etree.cElementTree.Element.__iter__
+typing.IO.__iter__  # See https://github.com/python/typeshed/commit/97bc450acd60c1bcdafef3ce8fbe3b95a9c0cac3
+
 # ==========
 # Missing from deprecated modules
 # Any of these can be added if someone needs them
@@ -643,44 +652,15 @@ distutils.command.build_ext.USER_BASE
 distutils.command.build_scripts.ST_MODE
 distutils.command.install.*
 distutils.command.install_scripts.ST_MODE
-distutils.core.Command.dump_options
-distutils.core.Command.ensure_finalized
-distutils.core.DEBUG
-distutils.core.USAGE
-distutils.core.Distribution.announce
-distutils.core.Distribution.common_usage
-distutils.core.Distribution.display_option_names
-distutils.core.Distribution.display_options
-distutils.core.Distribution.dump_option_dicts
 distutils.core.Distribution.finalize_options
-distutils.core.Distribution.find_config_files
 distutils.core.Distribution.get_command_class
 distutils.core.Distribution.get_command_list
-distutils.core.Distribution.get_command_packages
-distutils.core.Distribution.global_options
 distutils.core.Distribution.handle_display_options
-distutils.core.Distribution.has_c_libraries
-distutils.core.Distribution.has_data_files
-distutils.core.Distribution.has_ext_modules
-distutils.core.Distribution.has_headers
-distutils.core.Distribution.has_modules
-distutils.core.Distribution.has_pure_modules
-distutils.core.Distribution.has_scripts
-distutils.core.Distribution.is_pure
-distutils.core.Distribution.negative_opt
-distutils.core.Distribution.parse_command_line
-distutils.core.Distribution.print_command_list
 distutils.core.Distribution.print_commands
-distutils.core.Distribution.reinitialize_command
 distutils.core.Distribution.run_command
-distutils.core.Distribution.run_commands
-distutils.core.extension_keywords
-distutils.core.gen_usage
-distutils.core.setup_keywords
 distutils.cygwinccompiler.CONFIG_H_NOTOK
 distutils.cygwinccompiler.CONFIG_H_OK
 distutils.cygwinccompiler.CONFIG_H_UNCERTAIN
-distutils.cygwinccompiler.PIPE
 distutils.cygwinccompiler.CygwinCCompiler.compiler_type
 distutils.cygwinccompiler.CygwinCCompiler.exe_extension
 distutils.cygwinccompiler.CygwinCCompiler.obj_extension
@@ -692,36 +672,14 @@ distutils.cygwinccompiler.Mingw32CCompiler.compiler_type
 distutils.cygwinccompiler.check_config_h
 distutils.cygwinccompiler.get_msvcr
 distutils.cygwinccompiler.get_versions
-distutils.cygwinccompiler.is_cygwingcc
 distutils.dir_util.ensure_relative
 distutils.dist.DEBUG
-distutils.dist.Distribution.announce
-distutils.dist.Distribution.common_usage
-distutils.dist.Distribution.display_option_names
-distutils.dist.Distribution.display_options
-distutils.dist.Distribution.dump_option_dicts
 distutils.dist.Distribution.finalize_options
-distutils.dist.Distribution.find_config_files
 distutils.dist.Distribution.get_command_class
 distutils.dist.Distribution.get_command_list
-distutils.dist.Distribution.get_command_packages
-distutils.dist.Distribution.global_options
 distutils.dist.Distribution.handle_display_options
-distutils.dist.Distribution.has_c_libraries
-distutils.dist.Distribution.has_data_files
-distutils.dist.Distribution.has_ext_modules
-distutils.dist.Distribution.has_headers
-distutils.dist.Distribution.has_modules
-distutils.dist.Distribution.has_pure_modules
-distutils.dist.Distribution.has_scripts
-distutils.dist.Distribution.is_pure
-distutils.dist.Distribution.negative_opt
-distutils.dist.Distribution.parse_command_line
-distutils.dist.Distribution.print_command_list
 distutils.dist.Distribution.print_commands
-distutils.dist.Distribution.reinitialize_command
 distutils.dist.Distribution.run_command
-distutils.dist.Distribution.run_commands
 distutils.dist.DistributionMetadata.set_classifiers
 distutils.dist.DistributionMetadata.set_keywords
 distutils.dist.DistributionMetadata.set_platforms
